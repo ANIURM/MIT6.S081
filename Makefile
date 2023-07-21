@@ -302,5 +302,7 @@ myapi.key:
 		false; \
 	fi;
 
+gdb:
+	riscv64-unknown-elf-gdb kernel/kernel
 
 .PHONY: handin tarball tarball-pref clean grade handin-check
