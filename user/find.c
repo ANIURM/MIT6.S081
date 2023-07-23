@@ -49,17 +49,19 @@ find(char *path, char *name)
         if (stat(buf, &st) < 0) {
             printf("find: cannot stat %s\n", buf);
         }
-        if (st.type == T_DIR) {
+        if (st.type == T_DIR && strcmp(de.name, ".") != 0 && strcmp(de.name, "..") != 0) {
             find(buf, name);
         }
     }
 }
 
 int
-main(int argc, char const *argv[])
+main(int argc, char *argv[])
 {
     if (argc < 3) {
         fprintf(2, "Usage: find <path> <name>\n");
+    } else {
+        find(argv[1], argv[2]);
     }
-    return 0;
+    exit(0);
 }
