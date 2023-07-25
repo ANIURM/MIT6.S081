@@ -3,21 +3,64 @@
 #include "user/user.h"
 
 int
+getIntFromBuf(char buf[])
+{
+    buf[sizeof(int)] = 0;
+    return atoi(buf);
+}
+
+void
+processor(int reader)
+{
+    int p[2];
+    pipe(p);
+    char buf[50];
+    int n;
+
+    if (fork() > 0) {
+        // get the first int from pipe
+        n = read(reader, buf, sizeof(int));
+        int firstInt;
+        if (n == sizeof(int)) {
+            firstInt = getIntFromBuf(buf);
+            printf("prime %d\n", firstInt);
+        } else {
+            exit(0);
+        }
+
+        // process integers from left pipe
+        while ((n = read(reader, buf, sizeof(int))) == sizeof(int)) {
+            int nextInt = getIntFromBuf(buf);
+            if (nextInt % firstInt != 0) {
+                // send to right pipe
+                write(p[1], &nextInt, sizeof(int));
+            }
+        }
+        wait(0);
+    } else {
+        processor(p[0]);
+    }
+}
+
+void
+generator(int writer)
+{
+    for (int i = 2; i <= 35; i++) {
+        write(writer, &i, sizeof(int));
+    }
+}
+
+int
 main(int argc, char const *argv[])
 {
     int p[2];
     pipe(p);
-    char buf[100];
 
     if (fork() > 0) {
-        close(p[0]);
-        for (int i = 2; i <= 35; i++) {
-            write(p[1], i, sizeof(int));
-        }
+        generator(p[1]);
         wait(0);
-
     } else {
-        read(p[0], buf, sizeof(int));
+        processor(p[0]);
     } 
     exit(0);
 }
