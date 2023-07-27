@@ -5,8 +5,9 @@
 int
 getIntFromBuf(char buf[])
 {
-    buf[sizeof(int)] = 0;
-    return atoi(buf);
+    int value;
+    memcpy(&value, buf, sizeof(int));
+    return value;
 }
 
 void
@@ -17,17 +18,17 @@ processor(int reader)
     char buf[50];
     int n;
 
-    if (fork() > 0) {
-        // get the first int from pipe
-        n = read(reader, buf, sizeof(int));
-        int firstInt;
-        if (n == sizeof(int)) {
-            firstInt = getIntFromBuf(buf);
-            printf("prime %d\n", firstInt);
-        } else {
-            exit(0);
-        }
+    // get the first int from pipe
+    n = read(reader, buf, sizeof(int));
+    int firstInt;
+    if (n == sizeof(int)) {
+        firstInt = getIntFromBuf(buf);
+        printf("prime %d\n", firstInt);
+    } else {
+        return;
+    }
 
+    if (fork() > 0) {
         // process integers from left pipe
         while ((n = read(reader, buf, sizeof(int))) == sizeof(int)) {
             int nextInt = getIntFromBuf(buf);
