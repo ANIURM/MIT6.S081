@@ -1,0 +1,3 @@
+/Users/aniurm/xv6-labs-2020/cmake-build-debug/CMakeFiles/xv6_labs_2020.dir
+/Users/aniurm/xv6-labs-2020/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/aniurm/xv6-labs-2020/cmake-build-debug/CMakeFiles/rebuild_cache.dir

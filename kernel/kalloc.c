@@ -85,10 +85,12 @@ uint64
 freememsize(void)
 {
     uint64 size = 0;
+    acquire(&kmem.lock);
     struct run *r = kmem.freelist;
     while (r) {
-        size++;
+        size += PGSIZE;
         r = r->next;
     }
+    release(&kmem.lock);
     return size;
 }

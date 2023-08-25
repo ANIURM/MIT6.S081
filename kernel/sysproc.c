@@ -118,14 +118,10 @@ sys_sysinfo(void)
     }
 
     struct proc *p = myproc();
-    struct sysinfo *info;
-    info = (struct sysinfo *)kalloc();
-    if (info == 0) {
-        return -1;
-    }
-    info->freemem = freememsize();
-    info->nproc = procnum();
-    if (copyout(p->pagetable, addr, (char *)info, sizeof(*info)) < 0) {
+    struct sysinfo info;
+    info.freemem = freememsize();
+    info.nproc = procnum();
+    if (copyout(p->pagetable, addr, (char *)&info, sizeof(info)) < 0) {
         return -1;
     }
     return 0;
