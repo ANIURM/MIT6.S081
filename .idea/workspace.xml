@@ -9,7 +9,10 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="57a75cd5-c43a-499a-8aff-4ef7108af792" name="Changes" comment="feat: implement vmprint" />
+    <list default="true" id="57a75cd5-c43a-499a-8aff-4ef7108af792" name="Changes" comment="fix: booting problem">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/kernel/exec.c" beforeDir="false" afterPath="$PROJECT_DIR$/kernel/exec.c" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -77,6 +80,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "WebServerToolWindowFactoryState": "false",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
@@ -99,7 +103,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1693024655069</updated>
-      <workItem from="1693024656232" duration="4943000" />
+      <workItem from="1693024656232" duration="6444000" />
     </task>
     <task id="LOCAL-00001" summary="feat: implement vmprint">
       <option name="closed" value="true" />
@@ -109,7 +113,15 @@
       <option name="project" value="LOCAL" />
       <updated>1693037011119</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="fix: booting problem">
+      <option name="closed" value="true" />
+      <created>1693037577717</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1693037577717</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -120,7 +132,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="pgtbl" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -128,6 +152,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="feat: implement vmprint" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: implement vmprint" />
+    <MESSAGE value="fix: booting problem" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix: booting problem" />
   </component>
 </project>
