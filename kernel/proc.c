@@ -162,7 +162,7 @@ freeproc(struct proc *p)
 
   // free kernel stack - need to convert va to pa using walkaddr
   if (p->kstack)
-    kfree((void *)walkaddr(p->kernel_pagetable, p->kstack, 0));
+    kfree((void *) kvmpa(p->kstack));
 
   // free kernel page table
   freewalk(p->kernel_pagetable, 1);
