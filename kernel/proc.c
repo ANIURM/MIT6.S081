@@ -162,7 +162,7 @@ freeproc(struct proc *p)
 
   // free kernel stack - need to convert va to pa using walkaddr
   if (p->kstack)
-    kfree((void *) kvmpa(p->kstack));
+    kfree((void *) kvmpa(p->kernel_pagetable, p->kstack));
 
   // free kernel page table
   freewalk(p->kernel_pagetable, 1);
@@ -489,11 +489,11 @@ scheduler(void)
         // to release its lock and then reacquire it
         // before jumping back to us.
         p->state = RUNNING;
+        c->proc = p;
 
         w_satp(MAKE_SATP(p->kernel_pagetable));
         sfence_vma();
 
-        c->proc = p;
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
