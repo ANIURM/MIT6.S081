@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "gdb",
+            "request": "attach",
+            "name": "Attach to gdbserver",
+            "executable": "${workspaceRoot}/kernel/kernel",
+            "gdbpath": "/opt/homebrew/bin/riscv64-unknown-elf-gdb",
+            "remote": true,
+            "target": "127.0.0.1:25501",
+            "cwd": "${workspaceRoot}",
+            "setupCommands": {
+                "text": "source ${workspaceFolder}/.gdbinit"
+            }
+        }
+    ]
+}
