@@ -1,6 +1,7 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "user/user.h"
+#include "kernel/riscv.h"
 
 #include <stdarg.h>
 
@@ -113,13 +114,6 @@ printf(const char *fmt, ...)
 }
 
 void
-backtrace(void)
-{
-  uint64 fp = r_fp();
-  backtrace_helper(fp);
-}
-
-void
 backtrace_helper(uint64 fp)
 {
   // get return address lives at a fixed offset (-8)
@@ -136,4 +130,11 @@ backtrace_helper(uint64 fp)
 
   // otherwise, recurse
   backtrace_helper(prev_fp);
+}
+
+void
+backtrace(void)
+{
+  uint64 fp = r_fp();
+  backtrace_helper(fp);
 }
