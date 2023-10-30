@@ -1,7 +1,6 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "user/user.h"
-#include "kernel/riscv.h"
 
 #include <stdarg.h>
 
@@ -111,30 +110,4 @@ printf(const char *fmt, ...)
 
   va_start(ap, fmt);
   vprintf(1, fmt, ap);
-}
-
-void
-backtrace_helper(uint64 fp)
-{
-  // get return address lives at a fixed offset (-8)
-  uint64 ra = *(uint64*)(fp - 8);
-  // get previous frame pointer lives at a fixed offset (-16)
-  uint64 prev_fp = *(uint64*)(fp - 16);
-
-  printf("%x\n", ra);
-
-  // if previous frame pointer is 0, we've reached the end of the backtrace
-  if (prev_fp == 0) {
-    return;
-  }
-
-  // otherwise, recurse
-  backtrace_helper(prev_fp);
-}
-
-void
-backtrace(void)
-{
-  uint64 fp = r_fp();
-  backtrace_helper(fp);
 }
