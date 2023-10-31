@@ -81,6 +81,10 @@ usertrap(void)
     if (p->alarm_interval > 0) {
       if (--p->alarm_ticks_left == 0) {
         p->alarm_ticks_left = p->alarm_interval;
+        
+        // save original trapframe
+        memmove(p->alarm_trapframe, p->trapframe, sizeof(struct trapframe));
+
         p->trapframe->epc = p->alarm_handler_addr;
       }
     }
