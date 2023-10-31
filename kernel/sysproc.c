@@ -128,5 +128,6 @@ sys_sigreturn(void)
 {
   struct proc *p = myproc();
   memmove(p->trapframe, p->alarm_trapframe, sizeof(struct trapframe));
+  p->handler_executing = 0;
   return 0;
 }

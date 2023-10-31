@@ -107,4 +107,5 @@ struct proc {
   uint64 alarm_handler_addr;
   int alarm_ticks_left;
   struct trapframe *alarm_trapframe;  // data page for original user program
+  int handler_executing;
 };
