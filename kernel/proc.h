@@ -105,6 +105,6 @@ struct proc {
   char name[16];               // Process name (debugging)
   int alarm_enabled;
   int alarm_interval;          
-  uint64 alarm_handler;
+  uint64 alarm_handler_addr;
   int alarm_ticks_left;
 };

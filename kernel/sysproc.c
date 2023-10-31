@@ -113,13 +113,13 @@ sys_sigalarm(void)
 
   if (ticks == 0 && handler == 0) {
     // disable alarm
-    p->alarm_enabled = p->alarm_interval = p->alarm_handler = p->alarm_ticks_left = 0;
+    p->alarm_enabled = p->alarm_interval = p->alarm_handler_addr = p->alarm_ticks_left = 0;
     return 0;
   }
 
   p->alarm_enabled = 1;
   p->alarm_interval = ticks;
-  p->alarm_handler = handler;
+  p->alarm_handler_addr = handler;
   p->alarm_ticks_left = ticks;
   return 0;
 }
