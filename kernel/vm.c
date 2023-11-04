@@ -469,6 +469,13 @@ uvmlazytouch(struct proc *p, uint64 va)
 int
 uvmshouldtouch(struct proc *p, uint64 va)
 {
+  if (va >= p->sz)
+    return 0;
+  
+  // should not touch guard page below stack
+  if (PGROUNDDOWN(va) <= r_sp())
+    return 0;
+
   pte_t *pte = walk(p->pagetable, va, 0);
   return pte == 0 || (*pte & PTE_V) == 0;
 }
