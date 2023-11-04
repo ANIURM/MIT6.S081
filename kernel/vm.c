@@ -465,3 +465,10 @@ uvmlazytouch(struct proc *p, uint64 va)
     p->killed = 1;
   }
 }
+
+int
+uvmshouldtouch(struct proc *p, uint64 va)
+{
+  pte_t *pte = walk(p->pagetable, va, 0);
+  return pte == 0 || (*pte & PTE_V) == 0;
+}
