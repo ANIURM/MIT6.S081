@@ -70,25 +70,7 @@ usertrap(void)
     // ok
   } else if (scause == 13 || scause == 15) {
     // page fault
-    uint64 va = r_stval();
-    if (va < p->sz) {
-      va = PGROUNDDOWN(va);
-      char *mem = kalloc();
-      if (mem == 0) {
-        printf("usertrap out of memory\n");
-        p->killed = 1;
-      } else {
-        memset(mem, 0, PGSIZE);
-        if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
-          printf("usertrap failed to map page\n");
-          kfree(mem);
-          p->killed = 1;
-        }
-      }
-    } else {
-      printf("usertrap out of bounds\n");
-      p->killed = 1;
-    }
+    uvmlazytouch(p, r_stval());
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
@@ -240,3 +222,25 @@ devintr()
   }
 }
 
+void
+uvmlazytouch(struct proc *p, uint64 va)
+{
+  if (va < p->sz) {
+    va = PGROUNDDOWN(va);
+    char *mem = kalloc();
+    if (mem == 0) {
+      printf("lazy: out of memory\n");
+      p->killed = 1;
+    } else {
+      memset(mem, 0, PGSIZE);
+      if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
+        printf("lazy: failed to map page\n");
+        kfree(mem);
+        p->killed = 1;
+      }
+    }
+  } else {
+    printf("lazy: out of bounds\n");
+    p->killed = 1;
+  }
+}

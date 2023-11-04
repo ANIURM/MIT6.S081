@@ -145,6 +145,7 @@ void            trapinit(void);
 void            trapinithart(void);
 extern struct spinlock tickslock;
 void            usertrapret(void);
+void            uvmlazytouch(struct proc *, uint64);
 
 // uart.c
 void            uartinit(void);
