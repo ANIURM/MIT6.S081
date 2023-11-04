@@ -77,12 +77,13 @@ usertrap(void)
       if (mem == 0) {
         printf("usertrap out of memory\n");
         p->killed = 1;
-      }
-      memset(mem, 0, PGSIZE);
-      if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
-        printf("usertrap failed to map page\n");
-        kfree(mem);
-        p->killed = 1;
+      } else {
+        memset(mem, 0, PGSIZE);
+        if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
+          printf("usertrap failed to map page\n");
+          kfree(mem);
+          p->killed = 1;
+        }
       }
     } else {
       printf("usertrap out of bounds\n");
