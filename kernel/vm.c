@@ -446,23 +446,18 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 void
 uvmlazytouch(struct proc *p, uint64 va)
 {
-  if (va < p->sz) {
-    va = PGROUNDDOWN(va);
-    char *mem = kalloc();
-    if (mem == 0) {
-      printf("lazy: out of memory\n");
-      p->killed = 1;
-    } else {
-      memset(mem, 0, PGSIZE);
-      if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
-        printf("lazy: failed to map page\n");
-        kfree(mem);
-        p->killed = 1;
-      }
-    }
-  } else {
-    printf("lazy: out of bounds\n");
+  va = PGROUNDDOWN(va);
+  char *mem = kalloc();
+  if (mem == 0) {
+    printf("lazy: out of memory\n");
     p->killed = 1;
+  } else {
+    memset(mem, 0, PGSIZE);
+    if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U) != 0) {
+      printf("lazy: failed to map page\n");
+      kfree(mem);
+      p->killed = 1;
+    }
   }
 }
 
@@ -473,7 +468,7 @@ uvmshouldtouch(struct proc *p, uint64 va)
     return 0;
   
   // should not touch guard page below stack
-  if (PGROUNDDOWN(va) <= r_sp())
+  if (PGROUNDDOWN(va) <= p->trapframe->sp)
     return 0;
 
   pte_t *pte = walk(p->pagetable, va, 0);

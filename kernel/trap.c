@@ -68,7 +68,7 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else if (scause == 13 || scause == 15) {
+  } else if ((scause == 13 || scause == 15) && uvmshouldtouch(p, r_stval())) {
     // page fault
     uvmlazytouch(p, r_stval());
   } else {
