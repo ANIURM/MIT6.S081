@@ -164,7 +164,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
       panic("remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
     // increase the reference count of the page
-    ref_count[pa / PGSIZE]++;
+    ref_count[REFINDEX(pa)]++;
     if(a == last)
       break;
     a += PGSIZE;
@@ -197,7 +197,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
       kfree((void*)pa);
     }
     // decrement the reference count of the page
-    ref_count[pa / PGSIZE]--;
+    ref_count[REFINDEX(pa)]--;
     *pte = 0;
   }
 }

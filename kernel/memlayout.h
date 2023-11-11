@@ -48,6 +48,7 @@
 #define PHYSTOP (KERNBASE + 128*1024*1024)
 
 #define REFNUM (PHYSTOP / PGSIZE)
+#define REFINDEX(pa) ((uint64)pa / PGSIZE)
 
 // map the trampoline page to the highest address,
 // in both user and kernel space.

@@ -58,7 +58,7 @@ kfree(void *pa)
     panic("kfree");
   
   // check if the reference count of the page is 0
-  if (ref_count[(uint64)pa / PGSIZE] == 0)
+  if (ref_count[REFINDEX(pa)] != 0)
     return;
 
   // Fill with junk to catch dangling refs.
@@ -86,10 +86,11 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
-  if(r)
+  if(r) {
     memset((char*)r, 5, PGSIZE); // fill with junk
+    // set the reference count of the page to 1
+    ref_count[REFINDEX(r)] = 1;
+  }
   
-  // set the reference count of the page to 1
-  ref_count[(uint64)r / PGSIZE] = 1;
   return (void*)r;
 }
