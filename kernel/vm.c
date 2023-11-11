@@ -460,3 +460,26 @@ needcow(struct proc *p, uint64 va)
   
   return (*pte & PTE_COW) != 0;
 }
+
+int
+cow(struct proc *p, uint64 va)
+{
+  pte_t *pte = walk(p->pagetable, va, 0);
+  uint64 pa = PTE2PA(*pte);
+  char *mem = kalloc();
+  if (mem == 0) {
+    printf("cow: out of memory\n");
+    return -1;
+  }
+
+  memmove(mem, (char *)pa, PGSIZE);
+  va = PGROUNDDOWN(va);
+  uvmunmap(p->pagetable, va, 1, 0);
+  if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_FLAGS(*pte) | PTE_W) != 0) {
+    printf("cow: mappages failed\n");
+    kfree(mem);
+    return -1;
+  }
+
+  return 0;
+}

@@ -67,6 +67,12 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
+  } else if ((r_scause() == 15) && needcow(p, r_stval())) {
+    // copy on write
+    if (cow(p, r_stval()) < 0) {
+      printf("usertrap(): copy on write failed\n");
+      p->killed = 1;
+    }
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
