@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -318,6 +320,8 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
     // clear PTE_W in both old and new page tables
     *pte = *pte & ~PTE_W;
+    // set PTE_COW in both old and new page tables
+    *pte = *pte | PTE_COW;
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     // map the parent's physical pages into the child
@@ -435,4 +439,24 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+int
+needcow(struct proc *p, uint64 va)
+{
+  // Kill a process if it page-faults on a virtual memory address
+  // higher than any allocated with sbrk().
+  if (va >= p->sz)
+    return 0;
+
+  // Handle faults on the invalid page below the user stack.
+  // should not touch guard page below stack
+  if (PGROUNDDOWN(va) <= p->trapframe->sp)
+    return 0;
+
+  pte_t *pte = walk(p->pagetable, va, 0);
+  if (pte == 0 || (*pte & PTE_V) == 0)
+    return 0;
+  
+  return (*pte & PTE_COW) != 0;
 }
