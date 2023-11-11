@@ -17,6 +17,8 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
+extern int ref_count[REFNUM];
+
 /*
  * create a direct-map page table for the kernel.
  */
@@ -161,6 +163,8 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     if(*pte & PTE_V)
       panic("remap");
     *pte = PA2PTE(pa) | perm | PTE_V;
+    // increase the reference count of the page
+    ref_count[pa / PGSIZE]++;
     if(a == last)
       break;
     a += PGSIZE;
@@ -188,10 +192,12 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
       panic("uvmunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
+    uint64 pa = PTE2PA(*pte);
     if(do_free){
-      uint64 pa = PTE2PA(*pte);
       kfree((void*)pa);
     }
+    // decrement the reference count of the page
+    ref_count[pa / PGSIZE]--;
     *pte = 0;
   }
 }

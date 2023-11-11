@@ -23,11 +23,17 @@ struct {
   struct run *freelist;
 } kmem;
 
+// global variable to store the count of the reference of the page
+int ref_count[REFNUM];
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*)PHYSTOP);
+  // set the reference count of the page to 0
+  for (int i = 0; i < REFNUM; i++)
+    ref_count[i] = 0;
 }
 
 void
@@ -50,6 +56,10 @@ kfree(void *pa)
 
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
+  
+  // check if the reference count of the page is 0
+  if (ref_count[(uint64)pa / PGSIZE] == 0)
+    return;
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
@@ -78,5 +88,8 @@ kalloc(void)
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
+  
+  // set the reference count of the page to 1
+  ref_count[(uint64)r / PGSIZE] = 1;
   return (void*)r;
 }
