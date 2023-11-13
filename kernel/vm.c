@@ -450,16 +450,6 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 int
 needcow(struct proc *p, uint64 va)
 {
-  // Kill a process if it page-faults on a virtual memory address
-  // higher than any allocated with sbrk().
-  if (va >= p->sz)
-    return 0;
-
-  // Handle faults on the invalid page below the user stack.
-  // should not touch guard page below stack
-  if (PGROUNDDOWN(va) <= p->trapframe->sp)
-    return 0;
-
   pte_t *pte = walk(p->pagetable, va, 0);
   if (pte == 0 || (*pte & PTE_V) == 0)
     return 0;
