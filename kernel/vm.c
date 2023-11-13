@@ -324,10 +324,13 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
-    // clear PTE_W in both old and new page tables
-    *pte = *pte & ~PTE_W;
-    // set PTE_COW in both old and new page tables
-    *pte = *pte | PTE_COW;
+    // only use copy-on-write if the page is writable
+    if (*pte & PTE_W) {
+      // clear PTE_W in both old and new page tables
+      *pte = *pte & ~PTE_W;
+      // set PTE_COW in both old and new page tables
+      *pte = *pte | PTE_COW;
+    }
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     // map the parent's physical pages into the child
