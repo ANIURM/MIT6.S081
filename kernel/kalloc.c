@@ -30,10 +30,10 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  freerange(end, (void*)PHYSTOP);
   // set the reference count of the page to 0
   for (int i = 0; i < REFNUM; i++)
     ref_count[i] = 0;
+  freerange(end, (void*)PHYSTOP);
 }
 
 void
@@ -57,8 +57,9 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
   
-  // check if the reference count of the page is 0
-  if (ref_count[REFINDEX(pa)] != 0)
+  ref_count[REFINDEX(pa)]--;
+  // check if the reference count of the page is larger than 0
+  if (ref_count[REFINDEX(pa)] > 0)
     return;
 
   // Fill with junk to catch dangling refs.
