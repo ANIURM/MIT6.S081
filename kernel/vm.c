@@ -448,9 +448,9 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 }
 
 int
-needcow(struct proc *p, uint64 va)
+needcow(pagetable_t pagetable, uint64 va)
 {
-  pte_t *pte = walk(p->pagetable, va, 0);
+  pte_t *pte = walk(pagetable, va, 0);
   if (pte == 0 || (*pte & PTE_V) == 0)
     return 0;
   
@@ -458,9 +458,9 @@ needcow(struct proc *p, uint64 va)
 }
 
 int
-cow(struct proc *p, uint64 va)
+cow(pagetable_t pagetable, uint64 va)
 {
-  pte_t *pte = walk(p->pagetable, va, 0);
+  pte_t *pte = walk(pagetable, va, 0);
   uint64 pa = PTE2PA(*pte);
   char *mem = kalloc();
   if (mem == 0) {
@@ -470,8 +470,8 @@ cow(struct proc *p, uint64 va)
 
   memmove(mem, (char *)pa, PGSIZE);
   va = PGROUNDDOWN(va);
-  uvmunmap(p->pagetable, va, 1, 0);
-  if (mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_FLAGS(*pte) | PTE_W) != 0) {
+  uvmunmap(pagetable, va, 1, 0);
+  if (mappages(pagetable, va, PGSIZE, (uint64)mem, PTE_FLAGS(*pte) | PTE_W) != 0) {
     printf("cow: mappages failed\n");
     kfree(mem);
     return -1;

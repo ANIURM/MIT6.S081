@@ -67,9 +67,9 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else if ((r_scause() == 15) && needcow(p, r_stval())) {
+  } else if ((r_scause() == 15) && needcow(p->pagetable, r_stval())) {
     // copy on write
-    if (cow(p, r_stval()) < 0) {
+    if (cow(p->pagetable, r_stval()) < 0) {
       printf("usertrap(): copy on write failed\n");
       p->killed = 1;
     }
