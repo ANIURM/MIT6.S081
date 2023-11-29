@@ -36,7 +36,7 @@ struct thread {
 };
 struct thread all_thread[MAX_THREAD];
 struct thread *current_thread;
-extern void thread_switch(uint64, uint64);
+extern void thread_switch(struct context*, struct context*);
               
 void 
 thread_init(void)
@@ -77,10 +77,7 @@ thread_schedule(void)
     next_thread->state = RUNNING;
     t = current_thread;
     current_thread = next_thread;
-    /* YOUR CODE HERE
-     * Invoke thread_switch to switch from t to next_thread:
-     * thread_switch(??, ??);
-     */
+    thread_switch(&t->context, &next_thread->context);
   } else
     next_thread = 0;
 }
