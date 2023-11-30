@@ -79,11 +79,31 @@ kalloc(void)
 {
   struct run *r;
 
-  acquire(&kmem.lock);
-  r = kmem.freelist;
+  push_off();
+  int id = cpuid();
+  struct kmem kmem_now = kmems[id];
+  pop_off();
+  acquire(&kmem_now.lock);
+  r = kmem_now.freelist;
   if(r)
-    kmem.freelist = r->next;
-  release(&kmem.lock);
+    kmem_now.freelist = r->next;
+  release(&kmem_now.lock);
+
+  // no free memory in current CPU's free list
+  // steal from other CPUs
+  if (r == 0) {
+    for (int i = 0; i < NCPU; i++) {
+      if (i == id) continue;
+      acquire(&kmems[i].lock);
+      r = kmems[i].freelist;
+      if (r) {
+        kmems[i].freelist = r->next;
+        release(&kmems[i].lock);
+        break;
+      }
+      release(&kmems[i].lock);
+    }
+  }
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
