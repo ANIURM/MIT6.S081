@@ -23,14 +23,15 @@
 #include "fs.h"
 #include "buf.h"
 
+#define NBUCKET 13
+#define HASH(dev, blockno) (((uint)dev ^ (uint)blockno) % NBUCKET)
+
 struct {
   struct spinlock lock;
   struct buf buf[NBUF];
 
-  // Linked list of all buffers, through prev/next.
-  // Sorted by how recently the buffer was used.
-  // head.next is most recent, head.prev is least.
-  struct buf head;
+  struct buf bufmap[NBUCKET];
+  struct spinlock bufmap_lock[NBUCKET];
 } bcache;
 
 void
@@ -40,15 +41,14 @@ binit(void)
 
   initlock(&bcache.lock, "bcache");
 
-  // Create linked list of buffers
-  bcache.head.prev = &bcache.head;
-  bcache.head.next = &bcache.head;
-  for(b = bcache.buf; b < bcache.buf+NBUF; b++){
-    b->next = bcache.head.next;
-    b->prev = &bcache.head;
-    initsleeplock(&b->lock, "buffer");
-    bcache.head.next->prev = b;
-    bcache.head.next = b;
+  // Put buffers into bufmap
+  for (b = bcache.buf; b < bcache.buf + NBUF; b++) {
+    int hash = HASH(b->dev, b->blockno);
+    initlock(&bcache.bufmap_lock[hash], "bufmap_lock");
+    b->next = bcache.bufmap[hash].next;
+    b->prev = &bcache.bufmap[hash];
+    bcache.bufmap[hash].next->prev = b;
+    bcache.bufmap[hash].next = b;
   }
 }
 
