@@ -64,27 +64,27 @@ bget(uint dev, uint blockno)
 {
   struct buf *b;
 
-  int hash = HASH(dev, blockno);
-  acquire(&bcache.bufmap_lock[hash]);
+  int key = HASH(dev, blockno);
+  acquire(&bcache.bufmap_lock[key]);
 
   // Is the block already cached?
-  for (b = bcache.bufmap[hash].next; b != 0; b = b->next) {
+  for (b = bcache.bufmap[key].next; b != 0; b = b->next) {
     if (b->dev == dev && b->blockno == blockno) {
       b->refcnt++;
-      release(&bcache.bufmap_lock[hash]);
+      release(&bcache.bufmap_lock[key]);
       acquiresleep(&b->lock);
       return b;
     }
   }
 
   // Avoid deadlock
-  release(&bcache.bufmap_lock[hash]);
+  release(&bcache.bufmap_lock[key]);
 
   acquire(&bcache.evict_lock);
 
   // Check Again:
   // Is the block already cached?
-  for (b = bcache.bufmap[hash].next; b != 0; b = b->next) {
+  for (b = bcache.bufmap[key].next; b != 0; b = b->next) {
     if (b->dev == dev && b->blockno == blockno) {
       b->refcnt++;
       release(&bcache.evict_lock);
@@ -97,7 +97,7 @@ bget(uint dev, uint blockno)
   // Find a buffer to evict.
   // Trick: record the pointer before lru_buf for easier deletion.
   struct buf *before_lru_buf = 0;
-  int holding_lock = -1;
+  int holding_bucket = -1;
   for (int i = 0; i < NBUCKET; i++) {
     int new_found = 0;
     acquire(&bcache.bufmap_lock[i]);
@@ -110,10 +110,10 @@ bget(uint dev, uint blockno)
       }
     }
     if (new_found) {
-      if (holding_lock != -1)
-        release(&bcache.bufmap_lock[holding_lock]);
+      if (holding_bucket != -1)
+        release(&bcache.bufmap_lock[holding_bucket]);
       // keep holding the lock where new lru_buf is found.
-      holding_lock = i;
+      holding_bucket = i;
     } else {
       release(&bcache.bufmap_lock[i]);
     }
@@ -123,13 +123,16 @@ bget(uint dev, uint blockno)
     panic("bget: no buffers");
   }
 
-  // Evict the buffer.
   b = before_lru_buf->next;
-  // Remove lru_buf from original bucket
-  before_lru_buf->next = b->next;
-  // Add lru_buf to the head of the bucket
-  b->next = bcache.bufmap[hash].next;
-  bcache.bufmap[hash].next = b;
+  if (holding_bucket != key) {
+    // Remove lru_buf from original bucket
+    before_lru_buf->next = b->next;
+    // Add lru_buf to the head of the bucket
+    acquire(&bcache.bufmap_lock[key]);
+    b->next = bcache.bufmap[key].next;
+    bcache.bufmap[key].next = b;
+    release(&bcache.bufmap_lock[key]);
+  }
   // Update buf info
   b->blockno = blockno;
   b->dev = dev;
@@ -137,7 +140,7 @@ bget(uint dev, uint blockno)
   b->refcnt = 1;
   b->last_use = ticks;
   acquiresleep(&b->lock);
-  release(&bcache.bufmap_lock[holding_lock]);
+  release(&bcache.bufmap_lock[holding_bucket]);
   release(&bcache.evict_lock);
   
   return b;
