@@ -27,7 +27,6 @@
 #define HASH(dev, blockno) (((uint)dev ^ (uint)blockno) % NBUCKET)
 
 struct {
-  struct spinlock lock;
   struct buf buf[NBUF];
 
   struct buf bufmap[NBUCKET];
@@ -41,7 +40,6 @@ binit(void)
 {
   struct buf *b;
 
-  initlock(&bcache.lock, "bcache");
   initlock(&evict_lock, "evict_lock");
 
   for (int i = 0; i < NBUCKET; i++) { bcache.bufmap[i].next = 0; }
@@ -98,11 +96,9 @@ bget(uint dev, uint blockno)
   // Trick: record the pointer before lru_buf for easier deletion.
   struct buf *before_lru_buf = 0;
   int holding_lock = -1;
-  // traverse all buckets to find the least recently used buffer.
   for (int i = 0; i < NBUCKET; i++) {
     int new_found = 0;
     acquire(&bcache.bufmap_lock[i]);
-    // traverse all buffers in the bucket.
     for (b = &bcache.bufmap[i]; b->next != 0; b = b->next) {
       if (b->next->refcnt == 0) {
         if (before_lru_buf == 0 || b->next->last_use < before_lru_buf->last_use) {
@@ -179,33 +175,28 @@ brelse(struct buf *b)
 
   releasesleep(&b->lock);
 
-  acquire(&bcache.lock);
+  int hash = HASH(b->dev, b->blockno);
+  acquire(&bcache.bufmap_lock[hash]);
   b->refcnt--;
-  if (b->refcnt == 0) {
-    // no one is waiting for it.
-    b->next->prev = b->prev;
-    b->prev->next = b->next;
-    b->next = bcache.head.next;
-    b->prev = &bcache.head;
-    bcache.head.next->prev = b;
-    bcache.head.next = b;
-  }
+  b->last_use = ticks;
   
-  release(&bcache.lock);
+  release(&bcache.bufmap_lock[hash]);
 }
 
 void
 bpin(struct buf *b) {
-  acquire(&bcache.lock);
+  int hash = HASH(b->dev, b->blockno);
+  acquire(&bcache.bufmap_lock[hash]);
   b->refcnt++;
-  release(&bcache.lock);
+  release(&bcache.bufmap_lock[hash]);
 }
 
 void
 bunpin(struct buf *b) {
-  acquire(&bcache.lock);
+  int hash = HASH(b->dev, b->blockno);
+  acquire(&bcache.bufmap_lock[hash]);
   b->refcnt--;
-  release(&bcache.lock);
+  release(&bcache.bufmap_lock[hash]);
 }
 
 
