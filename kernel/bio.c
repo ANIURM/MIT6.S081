@@ -44,10 +44,7 @@ binit(void)
   initlock(&bcache.lock, "bcache");
   initlock(&evict_lock, "evict_lock");
 
-  for (int i = 0; i < NBUCKET; i++) {
-    bcache.bufmap[i].next = &bcache.bufmap[i];
-    bcache.bufmap[i].prev = &bcache.bufmap[i];
-  }
+  for (int i = 0; i < NBUCKET; i++) { bcache.bufmap[i].next = 0; }
 
   // Put buffers into bufmap
   for (b = bcache.buf; b < bcache.buf + NBUF; b++) {
@@ -55,8 +52,6 @@ binit(void)
     initlock(&bcache.bufmap_lock[hash], "bufmap_lock");
     b->last_use = 0;
     b->next = bcache.bufmap[hash].next;
-    b->prev = &bcache.bufmap[hash];
-    bcache.bufmap[hash].next->prev = b;
     bcache.bufmap[hash].next = b;
   }
 }
@@ -73,7 +68,7 @@ bget(uint dev, uint blockno)
   acquire(&bcache.bufmap_lock[hash]);
 
   // Is the block already cached?
-  for (b = bcache.bufmap[hash].next; b != &bcache.bufmap[hash]; b = b->next) {
+  for (b = bcache.bufmap[hash].next; b != 0; b = b->next) {
     if (b->dev == dev && b->blockno == blockno) {
       b->refcnt++;
       release(&bcache.bufmap_lock[hash]);
@@ -82,10 +77,73 @@ bget(uint dev, uint blockno)
     }
   }
 
-  // Not cached.
-  // Recycle the least recently used (LRU) unused buffer.
+  // Avoid deadlock
+  release(&bcache.bufmap_lock[hash]);
 
-  panic("bget: no buffers");
+  acquire(&evict_lock);
+
+  // Check Again:
+  // Is the block already cached?
+  for (b = bcache.bufmap[hash].next; b != 0; b = b->next) {
+    if (b->dev == dev && b->blockno == blockno) {
+      b->refcnt++;
+      release(&evict_lock);
+      acquiresleep(&b->lock);
+      return b;
+    }
+  }
+
+  // Not cached.
+  // Find a buffer to evict.
+  // Trick: record the pointer before lru_buf for easier deletion.
+  struct buf *before_lru_buf = 0;
+  int holding_lock = -1;
+  // traverse all buckets to find the least recently used buffer.
+  for (int i = 0; i < NBUCKET; i++) {
+    int new_found = 0;
+    acquire(&bcache.bufmap_lock[i]);
+    // traverse all buffers in the bucket.
+    for (b = &bcache.bufmap[i]; b->next != 0; b = b->next) {
+      if (b->next->refcnt == 0) {
+        if (before_lru_buf == 0 || b->next->last_use < before_lru_buf->last_use) {
+          before_lru_buf = b;
+          holding_lock = i;
+          new_found = 1;
+        }
+      }
+    }
+    if (new_found) {
+      if (holding_lock != -1)
+        release(&bcache.bufmap_lock[holding_lock]);
+      // keep holding the lock where new lru_buf is found.
+      holding_lock = i;
+    } else {
+      release(&bcache.bufmap_lock[i]);
+    }
+  }
+
+  if (before_lru_buf == 0) {
+    panic("bget: no buffers");
+  }
+
+  // Evict the buffer.
+  b = before_lru_buf->next;
+  // Remove lru_buf from original bucket
+  before_lru_buf->next = b->next;
+  // Add lru_buf to the head of the bucket
+  b->next = bcache.bufmap[hash].next;
+  bcache.bufmap[hash].next = b;
+  // Update buf info
+  b->blockno = blockno;
+  b->dev = dev;
+  b->valid = 0;
+  b->refcnt = 1;
+  b->last_use = ticks;
+  acquiresleep(&b->lock);
+  release(&bcache.bufmap_lock[holding_lock]);
+  release(&evict_lock);
+  
+  return b;
 }
 
 // Return a locked buf with the contents of the indicated block.
