@@ -34,12 +34,20 @@ struct {
   struct spinlock bufmap_lock[NBUCKET];
 } bcache;
 
+struct spinlock evict_lock;
+
 void
 binit(void)
 {
   struct buf *b;
 
   initlock(&bcache.lock, "bcache");
+  initlock(&evict_lock, "evict_lock");
+
+  for (int i = 0; i < NBUCKET; i++) {
+    bcache.bufmap[i].next = &bcache.bufmap[i];
+    bcache.bufmap[i].prev = &bcache.bufmap[i];
+  }
 
   // Put buffers into bufmap
   for (b = bcache.buf; b < bcache.buf + NBUF; b++) {
@@ -61,13 +69,14 @@ bget(uint dev, uint blockno)
 {
   struct buf *b;
 
-  acquire(&bcache.lock);
+  int hash = HASH(dev, blockno);
+  acquire(&bcache.bufmap_lock[hash]);
 
   // Is the block already cached?
-  for(b = bcache.head.next; b != &bcache.head; b = b->next){
-    if(b->dev == dev && b->blockno == blockno){
+  for (b = bcache.bufmap[hash].next; b != &bcache.bufmap[hash]; b = b->next) {
+    if (b->dev == dev && b->blockno == blockno) {
       b->refcnt++;
-      release(&bcache.lock);
+      release(&bcache.bufmap_lock[hash]);
       acquiresleep(&b->lock);
       return b;
     }
@@ -75,17 +84,7 @@ bget(uint dev, uint blockno)
 
   // Not cached.
   // Recycle the least recently used (LRU) unused buffer.
-  for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
-    if(b->refcnt == 0) {
-      b->dev = dev;
-      b->blockno = blockno;
-      b->valid = 0;
-      b->refcnt = 1;
-      release(&bcache.lock);
-      acquiresleep(&b->lock);
-      return b;
-    }
-  }
+
   panic("bget: no buffers");
 }
 
