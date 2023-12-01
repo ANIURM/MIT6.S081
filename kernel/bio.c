@@ -103,7 +103,6 @@ bget(uint dev, uint blockno)
       if (b->next->refcnt == 0) {
         if (before_lru_buf == 0 || b->next->last_use < before_lru_buf->last_use) {
           before_lru_buf = b;
-          holding_lock = i;
           new_found = 1;
         }
       }
