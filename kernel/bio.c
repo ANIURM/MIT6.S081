@@ -45,6 +45,7 @@ binit(void)
   for (b = bcache.buf; b < bcache.buf + NBUF; b++) {
     int hash = HASH(b->dev, b->blockno);
     initlock(&bcache.bufmap_lock[hash], "bufmap_lock");
+    b->last_use = 0;
     b->next = bcache.bufmap[hash].next;
     b->prev = &bcache.bufmap[hash];
     bcache.bufmap[hash].next->prev = b;
