@@ -84,26 +84,30 @@ kalloc(void)
   struct kmem *kmem_ptr = &kmems[id];
   pop_off();
   acquire(&kmem_ptr->lock);
+
+  // no free memory in current CPU's free list
+  // steal 64 pages from other CPUs
+  if (kmem_ptr->freelist == 0) {
+    int steal_left = 64;
+    for (int i = 0; i < NCPU; i++) {
+      if (i == id) continue;
+      acquire(&kmems[i].lock);
+      while (kmems[i].freelist && steal_left > 0) {
+        r = kmems[i].freelist;
+        kmems[i].freelist = r->next;
+        r->next = kmem_ptr->freelist;
+        kmem_ptr->freelist = r;
+        steal_left--;
+      }
+      release(&kmems[i].lock);
+      if (steal_left == 0) break;
+    }
+  }
+
   r = kmem_ptr->freelist;
   if(r)
     kmem_ptr->freelist = r->next;
   release(&kmem_ptr->lock);
-
-  // no free memory in current CPU's free list
-  // steal from other CPUs
-  if (r == 0) {
-    for (int i = 0; i < NCPU; i++) {
-      if (i == id) continue;
-      acquire(&kmems[i].lock);
-      r = kmems[i].freelist;
-      if (r) {
-        kmems[i].freelist = r->next;
-        release(&kmems[i].lock);
-        break;
-      }
-      release(&kmems[i].lock);
-    }
-  }
 
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
