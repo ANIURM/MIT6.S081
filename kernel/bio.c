@@ -31,26 +31,28 @@ struct {
 
   struct buf bufmap[NBUCKET];
   struct spinlock bufmap_lock[NBUCKET];
+  struct spinlock evict_lock;
 } bcache;
 
-struct spinlock evict_lock;
 
 void
 binit(void)
 {
   struct buf *b;
 
-  initlock(&evict_lock, "evict_lock");
+  initlock(&bcache.evict_lock, "evict_lock");
 
-  for (int i = 0; i < NBUCKET; i++) { bcache.bufmap[i].next = 0; }
+  for (int i = 0; i < NBUCKET; i++) {
+    bcache.bufmap[i].next = 0; 
+    initlock(&bcache.bufmap_lock[i], "bufmap_lock");
+  }
 
-  // Put buffers into bufmap
+  // Put all buffers into bufmap's 0th bucket.
   for (b = bcache.buf; b < bcache.buf + NBUF; b++) {
-    int hash = HASH(b->dev, b->blockno);
-    initlock(&bcache.bufmap_lock[hash], "bufmap_lock");
+    initsleeplock(&b->lock, "buffer");
     b->last_use = 0;
-    b->next = bcache.bufmap[hash].next;
-    bcache.bufmap[hash].next = b;
+    b->next = bcache.bufmap[0].next;
+    bcache.bufmap[0].next = b;
   }
 }
 
@@ -78,14 +80,14 @@ bget(uint dev, uint blockno)
   // Avoid deadlock
   release(&bcache.bufmap_lock[hash]);
 
-  acquire(&evict_lock);
+  acquire(&bcache.evict_lock);
 
   // Check Again:
   // Is the block already cached?
   for (b = bcache.bufmap[hash].next; b != 0; b = b->next) {
     if (b->dev == dev && b->blockno == blockno) {
       b->refcnt++;
-      release(&evict_lock);
+      release(&bcache.evict_lock);
       acquiresleep(&b->lock);
       return b;
     }
@@ -136,7 +138,7 @@ bget(uint dev, uint blockno)
   b->last_use = ticks;
   acquiresleep(&b->lock);
   release(&bcache.bufmap_lock[holding_lock]);
-  release(&evict_lock);
+  release(&bcache.evict_lock);
   
   return b;
 }
