@@ -179,28 +179,28 @@ brelse(struct buf *b)
 
   releasesleep(&b->lock);
 
-  int hash = HASH(b->dev, b->blockno);
-  acquire(&bcache.bufmap_lock[hash]);
+  int key = HASH(b->dev, b->blockno);
+  acquire(&bcache.bufmap_lock[key]);
   b->refcnt--;
   b->last_use = ticks;
   
-  release(&bcache.bufmap_lock[hash]);
+  release(&bcache.bufmap_lock[key]);
 }
 
 void
 bpin(struct buf *b) {
-  int hash = HASH(b->dev, b->blockno);
-  acquire(&bcache.bufmap_lock[hash]);
+  int key = HASH(b->dev, b->blockno);
+  acquire(&bcache.bufmap_lock[key]);
   b->refcnt++;
-  release(&bcache.bufmap_lock[hash]);
+  release(&bcache.bufmap_lock[key]);
 }
 
 void
 bunpin(struct buf *b) {
-  int hash = HASH(b->dev, b->blockno);
-  acquire(&bcache.bufmap_lock[hash]);
+  int key = HASH(b->dev, b->blockno);
+  acquire(&bcache.bufmap_lock[key]);
   b->refcnt--;
-  release(&bcache.bufmap_lock[hash]);
+  release(&bcache.bufmap_lock[key]);
 }
 
 
