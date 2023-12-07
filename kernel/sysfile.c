@@ -287,8 +287,10 @@ struct inode*
 followsymlink(struct inode *ip, uint depth)
 {
   // prevent symlink circle
-  if (depth > 10)
+  if (depth > 10) {
+    iunlockput(ip);
     return 0;
+  }
 
   char buf[MAXPATH];
   int n;
@@ -297,11 +299,18 @@ followsymlink(struct inode *ip, uint depth)
   if (ip->type != T_SYMLINK)
     return ip;
 
-  if ((n = readi(ip, 0, (uint64)buf, 0, MAXPATH)) < 0)
+  if ((n = readi(ip, 0, (uint64)buf, 0, MAXPATH)) < 0) {
+    iunlockput(ip);
     return 0;
+  }
 
-  if ((next = namei(buf)) == 0)
+  if ((next = namei(buf)) == 0) {
+    iunlockput(ip);
     return 0;
+  }
+
+  iunlockput(ip);
+  ilock(next);
 
   return followsymlink(next, depth + 1);
 }
@@ -339,7 +348,6 @@ sys_open(void)
     }
     if (ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
       if ((ip = followsymlink(ip, 0)) == 0) {
-        iunlockput(ip);
         end_op();
         return -1;
       }
@@ -528,7 +536,6 @@ sys_symlink(void)
     end_op();
     return -1;
   }
-  ilock(ip);
 
   if (writei(ip, 0, (uint64)target, 0, strlen(target)) != strlen(target)) {
     end_op();
