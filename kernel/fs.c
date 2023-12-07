@@ -404,8 +404,8 @@ bmap(struct inode *ip, uint bn)
 
   if (bn < NDOUBLEINDIRECT) {
     // Load double indirect block, allocating if necessary.
-    if((addr = ip->addrs[NDIRECT+1]) == 0)
-      ip->addrs[NDIRECT+1] = addr = balloc(ip->dev);
+    if((addr = ip->addrs[INDEX_DOUBLEINDIRECT]) == 0)
+      ip->addrs[INDEX_DOUBLEINDIRECT] = addr = balloc(ip->dev);
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;
     uint double_indirect_block = a[bn / NINDIRECT];
@@ -455,6 +455,27 @@ itrunc(struct inode *ip)
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
+  }
+
+  if (ip->addrs[INDEX_DOUBLEINDIRECT]) {
+    bp = bread(ip->dev, ip->addrs[INDEX_DOUBLEINDIRECT]);
+    a = (uint*)bp->data;
+    for (i = 0; i < NINDIRECT; i++) {
+      if (a[i]) {
+        struct buf *bp2 = bread(ip->dev, a[i]);
+        uint *a2 = (uint*)bp2->data;
+        for (j = 0; j < NINDIRECT; j++) {
+          if (a2[j]) {
+            bfree(ip->dev, a2[j]);
+          }
+        }
+        brelse(bp2);
+        bfree(ip->dev, a[i]);
+      }
+    }
+    brelse(bp);
+    bfree(ip->dev, ip->addrs[INDEX_DOUBLEINDIRECT]);
+    ip->addrs[INDEX_DOUBLEINDIRECT] = 0;
   }
 
   ip->size = 0;
